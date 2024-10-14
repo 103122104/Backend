@@ -1,0 +1,15 @@
+{
+  "name": "04-video-player",
+  "version": "1.0.0",
+  "description": "a Backend from chai our code",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascirpt",
+    "backend"
+  ],
+  "author": "Sulabh Agarwal",
+  "license": "ISC"
+}
