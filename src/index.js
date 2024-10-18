@@ -1,11 +1,21 @@
 import mongoose from "mongoose";
 import { DB_NAME } from "./constants.js";
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 dotenv.config();
 
 // Way-1
 import connectDB from "./db/index.js";
 connectDB()
+.then(()=>{
+    app.on("error", (err)=>(
+        console.log("Error after connection", err)
+    ))
+
+    app.listen(process.env.PORT || 8000 , ()=>(
+        console.log(`app is listening.`)
+    ) )
+})
+.catch()
 
 /*
 //  Way-2
