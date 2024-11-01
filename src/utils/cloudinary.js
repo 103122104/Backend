@@ -1,5 +1,7 @@
 import {v2 as cloudinary} from "cloudinary"
 import fs from "fs" 
+import dotenv from "dotenv"; // important to import dotenv whevever we have to use it
+dotenv.config(); 
 
 
 cloudinary.config({ 
@@ -15,12 +17,14 @@ const uploadOnCloudinary = async (localFilePath) =>{
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type : "auto"
         })
+        fs.unlinkSync(localFilePath);
         // file has been uploaded successfully
-        console.log("file is uploaded on cloudinart", response.url);
+        console.log("file is uploaded on cloudinary successfully, ", response.url);
         return response;
     }catch(err){
         fs.unlinkSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed
-        return null
+        console.log("temporary file is removed from storage");
+        return null;
     }   
 }
 
