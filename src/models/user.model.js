@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema(
             unique: true,
             lowercase: true,
             trim: true,
-            index: true, // use to make it seachable
+            index: true, // use to make it searchable
         },
         email : {
             type : String,
@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
         },
         watchHistory : [
             {
-                type : mongoose.Schema.Types.ObjectID,
+                type : mongoose.Schema.Types.ObjectId,
                 ref: "Video"
             }
         ],
