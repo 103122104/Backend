@@ -11,14 +11,16 @@ app.use(cors({
 app.use(express.json({limit: "16kb"})) // agar json file aayegi toh
 app.use(express.urlencoded({extended: true, limit: "16kb"})) // for data in url 
 app.use(express.static("public"))
-
 app.use(cookieParser())
 
 // Routes Import
-import userRoutes from "./routes/user.routes.js"
+import userRouter from "./routes/user.routes.js"
+import videoRouter from "./routes/video.routes.js"
+import commentRouter from "./routes/comment.routes.js"
 
 //Routes declaration
-app.use("/api/v1/users", userRoutes)
-
+app.use("/api/v1/users", userRouter)
+app.use("/api/v1/videos", videoRouter)
+app.use("/api/v1/comment", commentRouter)
 
 export {app} 

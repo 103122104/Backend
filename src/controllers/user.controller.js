@@ -247,7 +247,7 @@ const updateAccountDetails = asyncHandler( async (req, res)=>{
 
     // validate either of them should exist
     if(!fullName || !email){
-        throw new ApiError(200, "fullname or email required")
+        throw new ApiError(400, "fullname or email required")
     }
 
     // step-2 find the user
@@ -338,12 +338,13 @@ const getUserChannelProfile = asyncHandler(async (req, res)=>{
     // step-2
     const channel =  await User.aggregate([
         {
+            // first match username in User database
             $match : {
                 username: username?.toLowerCase()
             }
         },
         {
-            $lookup: { // subsciber model se mere id wala channel find kronga 
+            $lookup: { // subsciber model se mere id (channel wale user ki id) wala channel find kronga 
                 from: "subscriptions",
                 localField: "_id",
                 foriegnField: "channel",

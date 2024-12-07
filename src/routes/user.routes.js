@@ -37,7 +37,7 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails);
 router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
 router.route("/coverimage").patch(verifyJWT, upload.single("coverimage"), updateCoverImage)
 router.route("/c/:username").get(verifyJWT, getUserChannelProfile)
-
-
 router.route("/refresh-token").post(refreshAccessToken);
+
+
 export default router;
