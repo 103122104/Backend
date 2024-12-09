@@ -49,7 +49,8 @@ const publishAVideo = asyncHandler( async (req, res)=>{
             title,
             description,
             duration,
-            owner: user._id
+            owner: user._id,
+            duration: videoFile.duration
         }
     )
 
@@ -199,6 +200,68 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, video, "Toggled Successfully"))
 })
+
+const getAllVideos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    //TODO: get all videos based on query, sort, pagination
+    if(query.trim()=== "" ){
+        throw new ApiError(400, "query not found")
+    }
+
+    const skip = (page-1)*limit
+
+    const searchedVideos = Video.aggregate(
+        [
+            {
+                $match : {
+                    title: query
+                }
+            },
+            {
+                $lookup : {
+                    from : "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                    pipeline : [
+                        {
+                            $project: {
+                                _id: 1,
+                                username: 1,
+                                fullName: 1,
+                                avatar: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields : {
+                    owner : {
+                        $first : "$owner"
+                    }
+                }
+            },
+            {
+                $sort : {
+                    sortBy : sortType
+                }
+            },
+            {
+                $skip : skip
+            },
+            {
+                $limit: limit
+            }
+        ]
+    )
+
+    if(!searchedVideos){
+        throw new ApiError(400, "No videos found")
+    }
+
+    return res.status(200).json(new ApiResponse(200, searchedVideos, "Videos found and paginated"))
+}) 
 
 export {
     publishAVideo,
