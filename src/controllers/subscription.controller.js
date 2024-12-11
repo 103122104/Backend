@@ -8,12 +8,12 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 
 const toggleSubscription = asyncHandler(async (req, res) => {
     // step-1 getting details from user
-    const {channelId} = req.params
+    const {channelId} = req.params;
     const user = req.user
 
     //step-2 validating user id
-    if(!isValidObjectId(channelId) || !isValidObjectId(user._id)){
-        throw new ApiError(400, "Invalid id")
+    if(!isValidObjectId(channelId)){
+        throw new ApiError(400, "Invalid Channelid")
     }
 
     // step-3 checking the channel
@@ -36,14 +36,14 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         })
         return res.status(200).json(new ApiResponse(200, subscriberdetails, "Successfully subscribed"))
     }else{
-        await subscriberData.remove()
+        await existingSubscriber.deleteOne()
         return res.status(200).json(new ApiResponse(200, {}, "Successfully unsubcribed"))
     }
 })
 
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-    const {channelId} = req.params
+    const {channelId} = req.params;
     if(!isValidObjectId(channelId)){
         throw new ApiError(200, "Invalid channelId")
     }
@@ -63,7 +63,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         throw new ApiError(200, "No subscriber found")
     }
 
-    return res.status(200).json(200, listOFChannelSubscribers, "Subsribers found successfully")
+    return res.status(200).json(new ApiResponse(200, listOFChannelSubscribers, "Subscribers found successfully"))
 })
 
 const getSubscribedChannels  = asyncHandler(async (req, res) => {
@@ -73,21 +73,52 @@ const getSubscribedChannels  = asyncHandler(async (req, res) => {
     }
 
     // validating in userDatabase
-    const subscriber = await User.findById(channelId);
-    if(!subscriber){
-        throw new ApiError(200, "subscriber not found")
+    const userChannel = await User.findById(subscriberId);
+    if(!userChannel){
+        throw new ApiError(200, "User-Channel not found")
     }
 
     // finding the list
-    const listOFChannelSubscribed = await Subscription.find({
-        subscriber: subscriberId 
-    })
+    const listOFChannelSubscribed = await Subscription.aggregate(
+        [
+            {
+                $match: {
+                    subscriber: new mongoose.Types.ObjectId(subscriberId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "channel",
+                    foreignField: "_id",
+                    as: "subscribedChannel",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                username: 1,
+                                fullName: 1,
+                                avatar: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields : {
+                    subscribedChannel : {
+                        $first : "$subscribedChannel"
+                    }
+                }
+            }
+        ]
+    )
 
     if(!listOFChannelSubscribed.length){
-        throw new ApiError(200, "No subscriber found")
+        throw new ApiError(400, "No subsriber found")
     }
 
-    return res.status(200).json(200, listOFChannelSubscribed, "Subsribers found successfully")
+    return res.status(200).json(new ApiResponse(200, listOFChannelSubscribed, "Subscribers found successfully"))
 })
 
 export {

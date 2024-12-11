@@ -1,7 +1,7 @@
-import { ApiError } from "../utils/ApiError";
-import { asyncHandler } from "../utils/asyncHandler";
-import { Tweet } from "../models/tweet.model";
-import { ApiResponse } from "../utils/ApiResponse";
+import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { Tweet } from "../models/tweet.model.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 
 const createTweet = asyncHandler(async (req, res)=>{
@@ -37,8 +37,8 @@ const updateTweet = asyncHandler(async (req, res)=>{
     const tweet = await Tweet.findById(tweetId);
 
     // checking if user is owner of tweet
-    if(req.user._id !== tweet.owner){
-        throw new ApiError(400, "Invalid owner of tweet")
+    if(!tweet.owner.equals(req.user._id)){
+        throw new ApiError(400, "Invalid owner of tweet, not have access to update")
     }
 
     // updating the tweet
@@ -49,7 +49,7 @@ const updateTweet = asyncHandler(async (req, res)=>{
     tweet.save({validateBeforeSave: false})
 
     // returning the response
-    return res.status(200).json(200, {}, "Tweet Updated successfully")
+    return res.status(200).json(new ApiResponse(200, tweet, "Tweet Updated successfully"))
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
@@ -58,25 +58,25 @@ const deleteTweet = asyncHandler(async (req, res) => {
     const tweet = await Tweet.findById(tweetId);
 
     // checking if user is owner of tweet
-    if(req.user._id !== tweet.owner){
-        throw new ApiError(400, "Invalid owner of tweet")
+    if(!tweet.owner.equals(req.user._id)){
+        throw new ApiError(400, "Invalid owner of tweet, not have access to update")
     }
 
     // deleting the tweet
-    await tweet.remove()
+    await tweet.deleteOne()
 
     // returning the response
-    return res.status(200).json(200, {}, "Tweet deleted successfully")
+    return res.status(200).json(new ApiResponse(200, tweet, "Tweet deleted successfully"))
 })
 
 const getUserTweets = asyncHandler(async (req, res) => {
     const userId = req.user._id
 
-    const tweet = Tweet.aggregate(
+    const tweet = await Tweet.aggregate(
         [
             {
                 $match: {
-                    owner: mongoose.Types.ObjectId(userId)
+                    owner: new mongoose.Types.ObjectId(userId)
                 }
             },
             {
@@ -129,7 +129,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
         ]
     )
 
-    if(!tweet){
+    if(!tweet.length){
         throw new ApiError(400 , "no tweet found for user")
     }
 

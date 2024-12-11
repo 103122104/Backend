@@ -4,6 +4,7 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
+import mongoose , { isValidObjectId } from "mongoose"
 
 const publishAVideo = asyncHandler( async (req, res)=>{
     // step-1 getting values from user
@@ -44,13 +45,12 @@ const publishAVideo = asyncHandler( async (req, res)=>{
     // step-8 registering video on database
     const video = await Video.create(
         {
-            videoFile: videoFile.path,
-            thumbnail: thumbnail.path,
+            videoFile: videoFile.url,
+            thumbnail: thumbnailFile.url,
             title,
             description,
-            duration,
+            duration : videoFile.duration,
             owner: user._id,
-            duration: videoFile.duration
         }
     )
 
@@ -69,13 +69,13 @@ const getVideoById = asyncHandler(async (req, res)=>{
     const {videoId} = req.params;
 
     // step-2 validating the videoid
-    if(videoId.trim === ""){
+    if(!isValidObjectId(videoId)){
         throw new ApiError(400, "VideoID not found")
     }
 
     // step-3 finding in database
-    const video = Video.findById(videoId);
-
+    const video = await Video.findById(videoId);
+    console.log(video)
     // step-4 validating the video
     if(!video){
         throw new ApiError(400, "Video not found in database")
@@ -88,7 +88,7 @@ const getVideoById = asyncHandler(async (req, res)=>{
 const updateVideo= asyncHandler(async (req, res)=>{
     // step-1 getting videoid 
     const {videoId} = req.params
-    if(videoId.trim === ""){
+    if(!isValidObjectId(videoId)){
         throw new ApiError(400, "VideoID not found")
     }
 
@@ -99,14 +99,10 @@ const updateVideo= asyncHandler(async (req, res)=>{
     }
 
     // step-3 finding the loggedin user
-    const user = await User.findById(req.user._id)
-    if(!user){
-        throw new ApiError(400, "User not found in database")
-
-    }
+    const user = req.user
 
     // step-4 check if user is the owner of video
-    if(user._id !== video.owner){
+    if(!video.owner.equals(user._id)){
         throw new ApiError(400, "Invalid Owner of the video")
     }
 
@@ -123,7 +119,7 @@ const updateVideo= asyncHandler(async (req, res)=>{
     }
 
     // step-7 updating on cloudinary
-    const thumbnail = uploadOnCloudinary(thumbnailPath);
+    const thumbnail = await uploadOnCloudinary(thumbnailPath);
     if(!thumbnail){
         throw new ApiError(400, "Thumbnail is not uploading on cloudinary")
     }
@@ -140,7 +136,7 @@ const updateVideo= asyncHandler(async (req, res)=>{
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    if(videoId.trim === ""){
+    if(!isValidObjectId(videoId)){
         throw new ApiError(400, "VideoID not found")
     }
 
@@ -151,27 +147,23 @@ const deleteVideo = asyncHandler(async (req, res) => {
     }
 
     // step-3 finding the loggedin user
-    const user = await User.findById(req.user._id)
-    if(!user){
-        throw new ApiError(400, "User not found in database")
-
-    }
+    const user = req.user
 
     // step-4 check if user is the owner of video
-    if(user._id !== video.owner){
+    if(!video.owner.equals(user._id)){
         throw new ApiError(400, "Invalid Owner of the video")
     }
 
     // step-5 deleting the video 
-    Video.findByIdAndDelete(videoId)
+    await video.deleteOne()
 
     // step-6 returning the response
-    return res.status(200).json(200, {}, "Video Deleted successfully")
+    return res.status(200).json(new ApiResponse(200, {}, "Video Deleted successfully"))
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    if(videoId.trim === ""){
+    if(!isValidObjectId(videoId)){
         throw new ApiError(400, "VideoID not found")
     }
 
@@ -182,35 +174,31 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     }
 
     // step-3 finding the loggedin user
-    const user = await User.findById(req.user._id)
-    if(!user){
-        throw new ApiError(400, "User not found in database")
-
-    }
+    const user = req.user
 
     // step-4 check if user is the owner of video
-    if(user._id !== video.owner){
+    if(!video.owner.equals(user._id)){
         throw new ApiError(400, "Invalid Owner of the video")
     }
 
     // step-5 toggling the value
     const isPublic = video.isPublished
     video.isPublished = !isPublic
-    video.save({validateBeforeSave: false})
+    await video.save({validateBeforeSave: false})
 
     return res.status(200).json(new ApiResponse(200, video, "Toggled Successfully"))
 })
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { page = 1, limit = 1, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
     if(query.trim()=== "" ){
         throw new ApiError(400, "query not found")
     }
 
-    const skip = (page-1)*limit
-
-    const searchedVideos = Video.aggregate(
+    const skip = (parseInt(page)-1)*parseInt(limit)
+    console.log(skip)
+    const searchedVideos = await Video.aggregate(
         [
             {
                 $match : {
@@ -244,23 +232,28 @@ const getAllVideos = asyncHandler(async (req, res) => {
             },
             {
                 $sort : {
-                    sortBy : sortType
+                    sortBy : parseInt(sortType)
                 }
             },
             {
                 $skip : skip
             },
             {
-                $limit: limit
+                $limit: parseInt(limit)
             }
         ]
     )
 
-    if(!searchedVideos){
+    if(!searchedVideos.length){
         throw new ApiError(400, "No videos found")
     }
 
-    return res.status(200).json(new ApiResponse(200, searchedVideos, "Videos found and paginated"))
+    return res.status(200).json(new ApiResponse(200, 
+        {
+            searchedVideos, 
+            page,
+            pagesize: limit,
+        }, "Videos found and paginated"))
 }) 
 
 export {
@@ -268,5 +261,6 @@ export {
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    getAllVideos
 }

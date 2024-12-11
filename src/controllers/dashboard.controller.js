@@ -14,7 +14,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
         [
             {
                 $match: {
-                    owner: mongoose.Types.ObjectId(userId)
+                    owner: new mongoose.Types.ObjectId(userId)
                 }
             },
             {
@@ -28,7 +28,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
             {
                 $lookup: {
                     from : "subscriptions",
-                    localField: "onwer",
+                    localField: "owner",
                     foreignField: "channel",
                     as : "subscriber"
                 }
@@ -44,22 +44,26 @@ const getChannelStats = asyncHandler(async (req, res) => {
                 }   
             },
             {
-                $addFields : {
-                    totalviews : {
+                $group : {
+                    _id: "$owner",
+                    totalViews : {
                         $sum : "$views"
                     },
                     totalVideos : {
-                        $size: ""
+                        $sum: 1
                     },
                     totalLikes : {
-                        $sum : "$likecount"
+                        $sum : "$likeCount"
+                    },
+                    totalSubscribers: {
+                        $first: "$totalSubscriber"
                     }
                 }
             },
             {
                 $project: {
-                    owner: 1,
-                    totalviews: 1,
+                    owner: "$_id",
+                    totalViews: 1,
                     totalSubscriber : 1,
                     totalVideos: 1,
                     totalLikes : 1,
@@ -87,7 +91,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
         [
             {
                 $match :{
-                    owner : user._id
+                    owner : new mongoose.Types.ObjectId(user._id)
                 }
             },
         ]
@@ -95,7 +99,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     if(!video.length){
         throw new ApiError(200, "user not found")
     }
-    return res.status(200).json(200, video, "Video found")
+    return res.status(200).json(new ApiResponse(200, video, "Video found"))
 })
 
 export {

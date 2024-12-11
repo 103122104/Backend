@@ -10,7 +10,7 @@ import {
 const router = Router()
 router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
 router.route("/").post(createTweet)
-router.route("/:tweetid").patch(updateTweet).delete(deleteTweet)
+router.route("/:tweetId").patch(updateTweet).delete(deleteTweet)
 router.route("/user/:userId").get(getUserTweets);
 
 export default router;

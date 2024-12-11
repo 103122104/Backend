@@ -37,7 +37,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         })
         return res.status(200).json(new ApiResponse(200, like, "video liked successfully"))
     }else{
-        await existingLike.remove()
+        await existingLike.deleteOne()
         return res.status(200).json(new ApiResponse(200, {}, "video liked removed successfully"))
     }
 })
@@ -71,7 +71,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         })
         return res.status(200).json(new ApiResponse(200, like, "comment liked successfully"))
     }else{
-        await existingLike.remove()
+        await existingLike.deleteOne()
         return res.status(200).json(new ApiResponse(200, {}, "comment liked removed successfully"))
     }
 })
@@ -105,7 +105,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         })
         return res.status(200).json(new ApiResponse(200, like, "tweet liked successfully"))
     }else{
-        await existingLike.remove()
+        await existingLike.deleteOne()
         return res.status(200).json(new ApiResponse(200, {}, "tweet liked removed successfully"))
     }
 })
@@ -119,7 +119,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
         {
             // match the user in like database
             $match : {
-                likedby : mongoose.Types.ObjectId(userId)
+                likedby : new mongoose.Types.ObjectId(userId)
             }
         },
         {

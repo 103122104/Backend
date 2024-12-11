@@ -1,4 +1,4 @@
-import { asyncHandler } from "../utils/asyncHandler";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { Playlist } from "../models/playlist.model.js";
@@ -57,9 +57,40 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     */
 
     // step-4 getting the playlist
-    const playlists = await Playlist.find({
-        owner: userId
-    })
+    const playlists = await Playlist.aggregate(
+        [
+            {
+                $match : {
+                    owner: new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                    pipeline : [
+                        {
+                            $project: {
+                                _id: 1,
+                                username: 1,
+                                fullName: 1,
+                                avatar: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    owner: {
+                        $first: "$owner"
+                    }
+                }
+            }
+        ]
+    )
 
     // step-5 validating
     if(!playlists.length){
@@ -91,7 +122,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     }
 
     // step -2 validating
-    const videos = Video.findById(playlistId)
+    const videos = await Video.findById(playlistId)
     if(!videos){
         throw new ApiError(400, "No video found")
     }
@@ -100,8 +131,8 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const play = await Playlist.findByIdAndUpdate(
         playlistId,
         {
-            $push: {
-                video: videoId
+            $addToSet: {
+                videos: videoId
             }
         },
         {new : true}
@@ -123,7 +154,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     }
 
     // step -2 validating the video
-    const videos = Video.findById(playlistId)
+    const videos = await Video.findById(videoId)
     if(!videos){
         throw new ApiError(400, "No video found")
     }
@@ -133,14 +164,14 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         playlistId,
         {
             $pull: {
-                video: videoId
+                videos: videoId
             }
         },
         {new : true}
     )
 
     // checking the details
-    const playlist = await Playlist.findById(playlistId)
+    const playlist = await Playlist.findById(play._id)
     if(!playlist){
         throw new ApiError(400, "No playlist found")
     }
@@ -162,13 +193,13 @@ const deletePlaylist = asyncHandler(async (req, res) => {
     
     // check whether the user is the owner 
     const userId = req.user._id
-    if (!playlist.owner.equals(user._id)) {
+    if (!playlist.owner.equals(userId)) {
         throw new ApiError(403, "User is not the owner of the playlist");
     }
 
     // remove the playlist
-    await playlist.remove()
-    return res.status(200).json(new ApiResponse(200, {}, "Playlist deleted Successfully"))
+    await playlist.deleteOne()
+    return res.status(200).json(new ApiResponse(200, playlist, "Playlist deleted Successfully"))
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
@@ -188,7 +219,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     
     // check whether the user is the owner 
     const userId = req.user._id
-    if (!playlist.owner.equals(user._id)) {
+    if (!playlist.owner.equals(userId)) {
         throw new ApiError(403, "User is not the owner of the playlist");
     }
 
@@ -196,6 +227,8 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     playlist.name = name
     playlist.description = description
     await playlist.save({validateBeforeSave: false})
+
+    return res.status(200).json((new ApiResponse(400, playlist, "Playlist Updated Successfully")))
 })
 
 export {

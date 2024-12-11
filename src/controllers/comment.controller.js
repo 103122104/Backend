@@ -4,7 +4,7 @@ import {Comment} from "../models/comment.model.js"
 import { User } from "../models/user.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { isValidObjectId } from "mongoose"
+import mongoose , { isValidObjectId } from "mongoose"
 
 const addComment = asyncHandler(async (req, res)=>{
     // Step-1 finding the video
@@ -39,14 +39,14 @@ const addComment = asyncHandler(async (req, res)=>{
     }
 
     // step-6 returning the data
-    return res.status(200).json(new Apiresponse(200, comment, "Comment created successfully"))
+    return res.status(200).json(new ApiResponse(200, comment, "Comment created successfully"))
 })
 
 const updateComment = asyncHandler(async (req, res)=>{
     // finding comment in url
     const {commentId} = req.params
     // validation the values
-    if(!isValidObjectId(videoId)){
+    if(!isValidObjectId(commentId)){
         throw new ApiError(400, "Invalid videoId")
     }
 
@@ -58,10 +58,9 @@ const updateComment = asyncHandler(async (req, res)=>{
 
     // step-3 checking if correct user is updating
     const commentUser = await Comment.findById(commentId)
-    if(commentUser.owner !== req.user._id){
+    if(!commentUser.owner.equals(req.user._id)){
         throw new ApiError(400, "Invalid user.")
     }
-
 
     // step-3 Updating the content
     const comment = await Comment.findByIdAndUpdate(
@@ -76,7 +75,7 @@ const updateComment = asyncHandler(async (req, res)=>{
     if(!comment){
         throw new ApiError(500, "Error in entry commment in db");
     }
-
+    console.log(4)
     return res.status(200).json(new ApiResponse(200, comment, "Comment updated successfully"))
 })
 
@@ -84,14 +83,14 @@ const deleteComment = asyncHandler(async (req, res)=>{
     // step-1 finding commentID
     const {commentId} = req.params
     // validation the values
-    if(!isValidObjectId(videoId)){
+    if(!isValidObjectId(commentId)){
         throw new ApiError(400, "Invalid videoId")
     }
 
     // step-2 checking if correct user is updating
     const commentUser = await Comment.findById(commentId)
-    if(commentUser.owner !== req.user._id){
-        throw new ApiError(400, "Invalid user.")
+    if(!commentUser.owner.equals(req.user._id)){
+        throw new ApiError(400, "Invalid user not have access to delete")
     }
 
     const comment =  await Comment.findByIdAndDelete(commentId)
@@ -106,15 +105,15 @@ const getVideoComments = asyncHandler(async (req, res) => {
     // getting the values 
     const {videoId} = req.params
     const {page = 1, limit = 10} = req.query
-    const skip = (page-1)*limit
-
+    const skip = parseInt((page-1)*limit)
+    console.log(limit)
     // Validating the values
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid videoId")
     }
 
     // check if video exist or not
-    const video = Video.findById(videoId)
+    const video = await Video.findById(videoId)
     if(!video){
         throw new ApiError(400, "Video not found")
     }
@@ -124,7 +123,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
         [
             {
                 $match: {
-                    video: mongoose.Types.ObjectId(videoId)
+                    video: new mongoose.Types.ObjectId(videoId)
                 }
             },
             {
@@ -176,7 +175,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 $skip : skip
             },
             {
-                $limit : limit
+                $limit : parseInt(limit)
             },
             {
                 $project: {
@@ -196,8 +195,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Comments not found on video")
     }
 
-    const totalPosts = await comment.countDocuments()
-
     // returning the response
     return res
     .status(200)
@@ -207,7 +204,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
             comments, 
             page, 
             pagesize: limit, 
-            totalPage: Math.ceil(totalPosts / limit),
         }, 
     "Comments fetched successfully"))
 })
