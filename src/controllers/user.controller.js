@@ -203,7 +203,7 @@ const loggedOutUser = asyncHandler( async(req, res)=>{
     return res.status(200)
               .clearCookie("accessToken", option)
               .clearCookie("refreshToken", option)
-              .json(new ApiResponse(200, {}, "user Logged out successfully"))
+              .json(new ApiResponse(200, {userId: user._id}, "user Logged out successfully"))
 })
 
 const changeCurrentPassword = asyncHandler(async(req, res)=>{
@@ -347,7 +347,7 @@ const getUserChannelProfile = asyncHandler(async (req, res)=>{
             $lookup: { // subsciber model se mere id (channel wale user ki id) wala channel find kronga 
                 from: "subscriptions",
                 localField: "_id",
-                foriegnField: "channel",
+                foreignField: "channel",
                 as: "subscribers"
             } 
         },
@@ -355,7 +355,7 @@ const getUserChannelProfile = asyncHandler(async (req, res)=>{
             $lookup: {
                 from: "subscriptions",
                 localField: "_id",
-                foriegnField: "subscriber",
+                foreignField: "subscriber",
                 as: "subscribedTo"
             }
         },

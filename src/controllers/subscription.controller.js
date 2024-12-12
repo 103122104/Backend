@@ -115,10 +115,10 @@ const getSubscribedChannels  = asyncHandler(async (req, res) => {
     )
 
     if(!listOFChannelSubscribed.length){
-        throw new ApiError(400, "No subsriber found")
+        throw new ApiError(400, "No channel subscribed found")
     }
 
-    return res.status(200).json(new ApiResponse(200, listOFChannelSubscribed, "Subscribers found successfully"))
+    return res.status(200).json(new ApiResponse(200, listOFChannelSubscribed, "Channel subscribed found successfully"))
 })
 
 export {

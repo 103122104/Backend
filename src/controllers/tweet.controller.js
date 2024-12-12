@@ -70,7 +70,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
 })
 
 const getUserTweets = asyncHandler(async (req, res) => {
-    const userId = req.user._id
+    const {userId} = req.params
 
     const tweet = await Tweet.aggregate(
         [
