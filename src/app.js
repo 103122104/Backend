@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import { ApiError } from "./utils/ApiError.js";
 const app = express()
 
 app.use(cors({
@@ -34,5 +35,23 @@ app.use("/api/v1/tweet", tweetRouter)
 app.use("/api/v1/healthcheck", healthcheckRouter)
 app.use("/api/v1/dashboard", dashBoardRouter)
 app.use("/api/v1/subscriptions", subscriptionRouter)
+
+app.use((err, req, res, next) => {
+    if (err instanceof ApiError) {
+        return res.status(err.statuscode).json({
+            success: err.success,
+            message: err.message,
+            errors: err.errors,
+        });
+    }
+
+    // Fallback for other unexpected errors
+    console.error(err); // Log the full error for debugging
+    return res.status(500).json({
+        success: false,
+        message: 'Internal Server Error',
+    });
+});
+
 
 export {app} 
